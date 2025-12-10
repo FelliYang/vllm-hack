@@ -315,6 +315,13 @@ class Ernie4_5_MoeAttention(nn.Module):
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
         q, k = self.rotary_emb(positions, q, k)
 
+        import os
+        if os.getenv("RECORD_ATTN_SCORE", "False") == "True":
+            # logger.info("记录attention score")
+            from vllm.utils.atten_score_helper import AttnScoreHelper
+            helper = AttnScoreHelper()
+            helper.record_attn_score_for_GQA(self.layer_idx, q, k, v, self.num_heads, self.num_kv_heads, self.scaling)
+
         # Attention
         attn_output = self.attn(q, k, v)
         # Output projection

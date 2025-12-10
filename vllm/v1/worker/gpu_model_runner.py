@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
-
+import os
 import gc
 import itertools
 import time
@@ -678,6 +678,17 @@ class GPUModelRunner(
         The SamplingMetadata is updated and copied to the GPU if there is a
         new/resumed/paused/finished request in the batch.
         """
+        if os.getenv("RECORD_ATTN_SCORE", "False") == "True":
+            # Remove finished requests from the cached states.
+            from vllm.utils.atten_score_helper import AttnScoreHelper
+            attn_record_helper = AttnScoreHelper()
+
+            for req_id in scheduler_output.finished_req_ids:
+                self.requests.pop(req_id, None)
+                # HACK for attn score record
+                logger.info(f"pop req_id slot: {req_id}")
+                attn_record_helper.remove_reqid_slot(req_id)
+
         # Remove finished requests from the cached states.
         for req_id in scheduler_output.finished_req_ids:
             self.requests.pop(req_id, None)
@@ -2697,6 +2708,14 @@ class GPUModelRunner(
                 tokens = [scheduler_output.num_scheduled_tokens[i] for i in req_ids]
                 num_scheduled_tokens_np = np.array(tokens, dtype=np.int32)
                 max_num_scheduled_tokens = int(num_scheduled_tokens_np.max())
+
+                if os.getenv("RECORD_ATTN_SCORE", "False") == "True":
+                    from vllm.utils.atten_score_helper import AttnScoreHelper
+                    attn_record_helper = AttnScoreHelper()
+                    for req in req_ids:
+                        attn_record_helper.inject_reqid_slot(req) # TODO: 这里假设只有一条样本，或者多条样本顺序处理, 没有考虑batch下如何prefill以及decode
+                        logger.info(f"inject req_id slot: {req}")
+                    
 
                 (
                     logits_indices,

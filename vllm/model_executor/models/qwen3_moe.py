@@ -295,6 +295,7 @@ class Qwen3MoeAttention(nn.Module):
 
         self.q_norm = RMSNorm(self.head_dim, eps=rms_norm_eps)
         self.k_norm = RMSNorm(self.head_dim, eps=rms_norm_eps)
+        self.layer_idx = extract_layer_index(prefix)
 
     def forward(
         self,
@@ -312,6 +313,14 @@ class Qwen3MoeAttention(nn.Module):
         k_by_head = self.k_norm(k_by_head)
         k = k_by_head.view(k.shape)
         q, k = self.rotary_emb(positions, q, k)
+
+        import os
+        if os.getenv("RECORD_ATTN_SCORE", "False") == "True":
+            # logger.info("记录attention score")
+            from vllm.utils.atten_score_helper import AttnScoreHelper
+            helper = AttnScoreHelper()
+            helper.record_attn_score_for_GQA(self.layer_idx, q, k, v, self.num_heads, self.num_kv_heads, self.scaling)
+
         attn_output = self.attn(q, k, v)
         output, _ = self.o_proj(attn_output)
         return output
