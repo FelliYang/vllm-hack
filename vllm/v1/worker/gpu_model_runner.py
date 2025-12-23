@@ -2713,8 +2713,11 @@ class GPUModelRunner(
                     from vllm.utils.atten_score_helper import AttnScoreHelper
                     attn_record_helper = AttnScoreHelper()
                     for req in req_ids:
-                        attn_record_helper.inject_reqid_slot(req) # TODO: 这里假设只有一条样本，或者多条样本顺序处理, 没有考虑batch下如何prefill以及decode
-                        logger.info(f"inject req_id slot: {req}")
+                        # 由于未知原因，这里会被add多次
+                        # NOTE: 这里假设只有一条样本，或者多条样本顺序处理, 没有考虑batch下如何prefill以及decode
+                        status = attn_record_helper.inject_reqid_slot(req) 
+                        if status:
+                            logger.info(f"inject req_id slot: {req}")
                     
 
                 (
