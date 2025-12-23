@@ -342,26 +342,12 @@ def test_sparse_dense_alignment():
     # 文件路径配置
     dense_file_path = "/tmp/debug/dense/CUDA_0/layer_0.pt"
     sparse_file_path = "/tmp/debug/sparse/CUDA_0/layer_0.pt"
-    # dense_file_path = "/tmp/dense/CUDA_1/layer_0.pt"
-    # sparse_file_path = "/tmp/sparse/CUDA_0/layer_0.pt"
-    # all_tensors = torch.load(dense_file_path)
-    # 读取数据
-    # print("\n[1] 读取数据...")
-    # for i in range(8):
-    #     dense_file_path = f"/tmp/dense/CUDA_{i}/layer_0.pt"
-    #     all_tensors = torch.load(dense_file_path)
-    #     print(f"  Dense shape: {all_tensors[0][1].shape}")
 
     attn_scores_dense = torch.load(dense_file_path)[0][1]
     sparse_dict = torch.load(sparse_file_path)[0][1]
     
     print(f"  Dense shape: {attn_scores_dense.shape}")
     print(f"  Sparse shape: {sparse_dict['shape']}")
-    # print(f"  Sparse indices shape: {sparse_dict['indices'].shape}")
-    
-    # 验证形状
-    # assert attn_scores_dense.shape == tuple(sparse_dict['shape']), \
-    #     f"形状不匹配: {attn_scores_dense.shape} vs {sparse_dict['shape']}"
     
     actual_tail_len, num_heads, seq_len = attn_scores_dense.shape
     actual_tail_len = 1
@@ -546,7 +532,3 @@ def test_sparse_save():
 
 if __name__ == "__main__":
     test_sparse_dense_alignment()
-
-    
-
-    
