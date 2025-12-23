@@ -1,3 +1,6 @@
+# vLLM Attention Score Recorder
+A lightweight hack tool for recording attention scores during inference in vLLM.
+
 ## Hack Code Summary
 ```bash
 git diff v0.11.2 HEAD --stat
@@ -10,7 +13,7 @@ git diff v0.11.2 HEAD --stat
 ```
 
 ## Usage & Limitation
-This tool supports to record attention scores in the **prefill** stage. If you want to record attention score in decoded stage, try to transform it into a prefill task by repeating the infer process twice. In the aspect of infer mode, this tool supports single node **DP** and **PP** infer mode currently. TP is currently not supported due to splited attention heads. 
+This tool supports recording attention scores in the **prefill** stage. If you want to record attention score in decoded stage, try to transform it into a prefill task by repeating the infer process twice. In the aspect of infer mode, this tool supports single node **DP** and **PP** infer mode currently. TP is currently not supported due to splited attention heads. 
 
 **Note**: 
 -  you must apply all these flags `--enforce-eager` | `--max-num-seqs 1` | `--max-num-batched-tokens xxx` | `--no-enable-prefix-caching` to exactly control vllm to execute the HACK code.
@@ -42,18 +45,26 @@ This tool supports to record attention scores in the **prefill** stage. If you w
 
 
 ### How to Control
-You can control the behavior by global environment variable in SHELL. Specifially,
-- `RECORD_ATTN_SCORE` is an overall control where to record attn scores
-- `ATTN_CONFIG_FILE` can be used to config the hacker. For Example:
-```bash
-  {
-    "sparse_save": true, # where to save by sparse tensor to save memory
-    "sparse_top_k": 4096, # sparse strategy, only valid when `sparse_save` is true
-    "save_dir": "/tmp/sparse", # Attn score file save_dir
-    "attn_tail_len": 0, # How num Tail Tokens' Attn Score to save. 0 refs to no tokens, 1 refs to last token, >1 refs to multiple tokens.
-  }
+You can control the behavior by global environment variable in SHELL. Specifically,
+- `RECORD_ATTN_SCORE` is an overall control whether to record attn scores
+- `ATTN_CONFIG_FILE` can be used to configure the recorder. For Example:
+
+**Example config file** (`/tmp/attn_config.json`):
+```json
+{
+  "sparse_save": true,
+  "sparse_top_k": 4096,
+  "save_dir": "/tmp/AttnScores",
+  "attn_tail_len": 0
+}
 ```
-Remind to delete these notes when passing the config into json file.
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `sparse_save` | boolean | Whether to save using sparse tensor format | `true` |
+| `sparse_top_k` | integer | Number of top-k values to keep (only when `sparse_save=true`) | `4096` |
+| `save_dir` | string | Directory path to save attention scores | `"/tmp/AttnScores"` |
+| `attn_tail_len` | integer | Number of tail tokens to record (0=none, 1=last token only) | `0` |
 
 ### Example of Ernie (DP)
 ```bash
@@ -61,7 +72,7 @@ ATTN_CONFIG_FILE="/tmp/attn_config.json" RECORD_ATTN_SCORE=True  uv run vllm ser
 ```
 ```bash
 # outputs look like
-/dev/shm/Qwen3-30B-A3B-Instruct-2507/
+/tmp/AttnScores
 ├── CUDA_0 # attn scores of the 15 examples dispatched by VLLM to [DP0]
 │   ├── layer_0.pt
 │   ├── layer_1.pt
@@ -87,7 +98,7 @@ ATTN_CONFIG_FILE="/tmp/attn_config.json" RECORD_ATTN_SCORE=True uv run vllm serv
 
 ```bash
 # outputs look like
-/dev/shm/Qwen3-30B-A3B-Instruct-2507/
+/tmp/AttnScores
 ├── CUDA_0 # attn scores of the 14 examples dispatched by VLLM to [DP0_PP0]
 │   ├── layer_0.pt
 │   ├── layer_1.pt
